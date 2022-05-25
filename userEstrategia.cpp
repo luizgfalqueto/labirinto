@@ -30,17 +30,21 @@
 		} tipo_PosicaoPlano;
 */
 
+using namespace std;
+
 #include <limits.h>
+#include <stack>
+#include <string>
 
 //Matriz e struct de posicoes do agente 1
 int player1_matrix[MAXCEL][MAXCEL];
 tipo_PosicaoPlano posicaoPlayer1;
 
 //Matriz e struct de posicoes do agente 2
-int player2_matrix[MAXCEL][MAXCEL];
+int player2_matrix[60][35];
 tipo_PosicaoPlano posicaoPlayer2;
 //Pilha para armazenamento do caminho percorrido pelo player2
-std::vector<const char *> pilhaPlayer2_historico;
+stack <const char *> pilhaPlayer2_caminho;
 
 // *** 	FUNCOES DE INICIALIZACAO E EXECUCAO DO JOGADOR 1 ***
 //	Implementacao da primeira estrategia de jogo.
@@ -92,7 +96,7 @@ int escolherMelhorCaminho(int *vet_Caminhos){
 }
 
 const char *run_Player1() {
-	const char *movimento;
+	const char *movimento = "null";
 
 	//Verifica quais caminhos sao possiveis. Ex: se o unico caminho é para leste -> vet_Caminhos=[0,0,0,1]
 	int vet_Caminhos[NUMCAMINHOS];
@@ -131,85 +135,174 @@ const char *run_Player1() {
 	return movimento;
 }
 
-// *** 	FUNCOES DE INICIALIZACAO E EXECUCAO DO JOGADOR 2 ***
-//	Implementacao da segunda estrategia de jogo.
-// 	Estratégia utilizada: buscar um caminho com valor -1 e seguir adiante, caso n for -1, busca um caminho aleatório
+/* 
+	*** 	FUNCOES DE INICIALIZACAO E EXECUCAO DO JOGADOR 2 ***
+	Implementacao da segunda estrategia de jogo.
+ 	Estratégia utilizada: percorrer o labirinto atualizando a posicao atual para 1 (inicialmente tudo 0) e empilhando a direcao
+                          percorrido na pilha. Verifica se existe caminho ainda nao percorrido e escolhe esse como proximo
+ 						  passo. Caso todas as direcoes ja foram percorridas, volta o caminho seguindo a direcao oposta do topo
+ 						  da pilha e desempilha em seguida. 
+*/
 void init_Player2() {
 	//Inicializa a matriz do player 1 com valores -1
-	for(int x=0; x<MAXCEL; x++){
-		for(int y=0; y<MAXCEL; y++){
-			player2_matrix[x][y] = -1;
+	for(int x=0; x<60; x++){
+		for(int y=0; y<35; y++){
+			player2_matrix[x][y] = 0;
 		}
 	}
 	
 	//Inicializando a pilha (vazia)
-	while(pilhaPlayer2_historico.size() > 0){
-		pilhaPlayer2_historico.pop_back();
+	while(pilhaPlayer2_caminho.size() > 0){
+		pilhaPlayer2_caminho.pop();
 	}
 
 	//Define posicao atual do agente 2
 	posicaoPlayer2.x = 0;
 	posicaoPlayer2.y = 0;
-	player2_matrix[posicaoPlayer2.x][posicaoPlayer2.y]++;
 }
-const char *run_Player2() {
-	const char *movimento = "oeste";
+
+/*
+	Funcao que dado um vetor com os caminhos possiveis de serem percorridos, verifica se um desses é viavel de seguir (se for um
+	caminho aind não percorrido) e retorna o indice do caminho esoclhido. Caso todos ja foram percorridos, retorna -1.
+*/
+int escolheCaminhoPlayer2(int *caminhosPossiveis){
+	int i;
+	for(i=0; i<NUMCAMINHOS; i++){
+		if(caminhosPossiveis[i] == 1){
+			switch (i)
+			{
+				case 0:
+					// Visualiza se a direcao norte é viavel
+					if(player2_matrix[posicaoPlayer2.x][posicaoPlayer2.y-1] == 0) return 0;
+					break;
+				case 1:
+					// Visualiza se a direcao sul é viavel
+					if(player2_matrix[posicaoPlayer2.x][posicaoPlayer2.y+1] == 0) return 1;
+					break;
+				case 2:
+					// Visualiza se a direcao oeste é viavel
+					if(player2_matrix[posicaoPlayer2.x-1][posicaoPlayer2.y] == 0) return 2;
+					break;
+				case 3:
+					// Visualiza se a direcao leste é viavel
+					if(player2_matrix[posicaoPlayer2.x+1][posicaoPlayer2.y] == 0) return 3;
+					break;
+				default:
+					break;
+			}
+		}
+	}
+	// Nenhum caminho viavel
+	return -1;
+}
+
+void printStack(stack <const char *> pilha){
+	printf("\n [ ");
+	while(!pilha.empty()){
+		const char *c = pilha.top();
+		cout << c;
+		printf(", ");
+		pilha.pop();
+	}
+	printf(" ]");
+}
+
+void printVet(int *vet){
+	int i;
+	printf("[");
+	for(i = 0; i<NUMCAMINHOS; i++){
+		printf(" %d", vet[i]);
+	}
+	printf(" ]\n");
+}
+
+void printMatrix(int mat[60][35]){
+	int i,j;
+	printf("Matriz atual: \n");
+	for(i=0; i<20; i++){
+		for(j=0; j<20; j++){
+			printf(" %d",mat[i][j]);
+		}
+		printf("\n");
+	}
+}
+
+/*
+	Dado uma direcao como string retorna o indice segundo o vetor id_Caminhos[]
+*/
+int get_id_return_path(const char *direction) {
+	if(direction == "norte") return 0;
+	else if(direction == "sul") return 1;
+	else if(direction == "oeste") return 2;
 	
-	// //Verifica se algum caminho é válido (!=PAREDE) e valor da proxima posicao igual a -1	
-	// if (maze_VerCaminho("norte") == CAMINHO && player2_matrix[posicaoPlayer2.x-1][posicaoPlayer2.y]==-1)  {
-	// 	posicaoPlayer2.x-=1;
-	// 	player2_matrix[posicaoPlayer2.x][posicaoPlayer2.y]=0;
-	// 	movimento = "norte";
-	// }
-	// else if (maze_VerCaminho("sul") == CAMINHO && player2_matrix[posicaoPlayer2.x+1][posicaoPlayer2.y]==-1)  {
-	// 	posicaoPlayer2.x+=1;
-	// 	player2_matrix[posicaoPlayer2.x][posicaoPlayer2.y]=0;
-	// 	movimento = "sul";
-	// }
-	// else if (maze_VerCaminho("oeste") == CAMINHO && player2_matrix[posicaoPlayer2.x][posicaoPlayer2.y-1]==-1)  {
-	// 	posicaoPlayer2.y-=1;
-	// 	player2_matrix[posicaoPlayer2.x][posicaoPlayer2.y]=0;
-	// 	movimento = "oeste";
-	// }
-	// else if (maze_VerCaminho("leste") == CAMINHO && player2_matrix[posicaoPlayer2.x][posicaoPlayer2.y+1]==-1) {
-	// 	posicaoPlayer2.y+=1;
-	// 	player2_matrix[posicaoPlayer2.x][posicaoPlayer2.y]=0;
-	// 	movimento = "leste";
-	// }
-	// //Caso contrário
-	// else {
-	// 	int move = rand()%4;//Sorteia um numero
-	// 	//Verifica se o caminho e valido
-	// 	switch(move){
-	// 		case 0:
-	// 			if (maze_VerCaminho("norte") == CAMINHO) {
-	// 				posicaoPlayer2.x-=1;
-	// 				movimento = "norte";
-	// 			}
-	// 			break;
-	// 		case 1:
-	// 			if(maze_VerCaminho("sul") == CAMINHO) {
-	// 				posicaoPlayer2.x+=1;
-	// 				movimento = "sul";
-	// 			}
-	// 			break;
-	// 		case 2:
-	// 			if(maze_VerCaminho("oeste") == CAMINHO) {
-	// 				posicaoPlayer2.y-=1;
-	// 				movimento = "oeste";
-	// 			}
-	// 			break;
-	// 		case 3:
-	// 			if(maze_VerCaminho("leste") == CAMINHO){
-	// 				posicaoPlayer2.y+=1;
-	// 				movimento = "leste";
-	// 			}
-	// 			break;
-	// 		default:
-	// 			break;
-	// 	}
-	// 	//Atualiza posicao do agente 2
-	// 	player2_matrix[posicaoPlayer2.x][posicaoPlayer2.y]++;
-	// }
-	return movimento;
+	return 3;
+}
+
+const char *run_Player2() {
+	const char *movimento = "null";
+
+	player2_matrix[posicaoPlayer2.x][posicaoPlayer2.y] = 1; // Atualiza a posicao atual como percorrida
+	
+	int caminhosPossiveis[NUMCAMINHOS];
+	int i;
+	for(i = 0; i<NUMCAMINHOS; i++){
+		if(maze_VerCaminho(id_Caminhos[i]) == PAREDE) caminhosPossiveis[i] = 0;
+		else caminhosPossiveis[i] = 1;
+	}
+
+	int caminhoEscolhido = escolheCaminhoPlayer2(caminhosPossiveis);
+
+	if(caminhoEscolhido == -1){
+		// Nao há caminhos ainda nao percorridos, entao é momento de desempilhar
+
+		const char *top_stack = "null";
+		top_stack = pilhaPlayer2_caminho.top(); // Armazenando o topo da pilha
+		pilhaPlayer2_caminho.pop(); // Desempilhando
+
+		int caminho_retorno = get_id_return_path(top_stack);
+
+		switch(caminho_retorno){
+			case 0:
+				posicaoPlayer2.y++;
+				break;
+			case 1:
+				posicaoPlayer2.y--;
+				break;
+			case 2:
+				posicaoPlayer2.x++;
+				break;
+			case 3:
+				posicaoPlayer2.x--;
+				break;
+			default:
+				break;
+		}
+
+		return id_Retornos[caminho_retorno];
+
+	}else{
+		// Encontrou pelo menos um caminho viavel
+		const char * direcao = id_Caminhos[caminhoEscolhido];
+
+		pilhaPlayer2_caminho.push(direcao); // Empilha a direção
+
+		switch(caminhoEscolhido){
+			case 0:
+				posicaoPlayer2.y--;
+				break;
+			case 1:
+				posicaoPlayer2.y++;
+				break;
+			case 2:
+				posicaoPlayer2.x--;
+				break;
+			case 3:
+				posicaoPlayer2.x++;
+				break;
+			default:
+				break;
+		}
+
+		return direcao;
+	}
 }
