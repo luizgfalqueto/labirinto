@@ -32,16 +32,17 @@
 
 using namespace std;
 
+#include <float.h>
 #include <limits.h>
 #include <stack>
 #include <string>
 
 //Matriz e struct de posicoes do agente 1
-int player1_matrix[MAXCEL][MAXCEL];
+int player1_matrix[60][35] = {0};
 tipo_PosicaoPlano posicaoPlayer1;
 
 //Matriz e struct de posicoes do agente 2
-int player2_matrix[60][35];
+int player2_matrix[60][35] = {0};
 tipo_PosicaoPlano posicaoPlayer2;
 //Pilha para armazenamento do caminho percorrido pelo player2
 stack <const char *> pilhaPlayer2_caminho;
@@ -50,20 +51,13 @@ stack <const char *> pilhaPlayer2_caminho;
 //	Implementacao da primeira estrategia de jogo.
 //	Estratégia: em cada posição do agente, buscar todos os caminhos possiveis. Em seguida buscar em qual caminho foi passado menos vezes pelo agente 1
 void init_Player1() {
-	//Inicializa a matriz do player 1 com valor 0 nos indices
-	for(int x=0; x<MAXCEL; x++){
-		for(int y=0; y<MAXCEL; y++){
-			player1_matrix[x][y] = 0;
-		}
-	}
-
 	//Define posicao atual do agente 1
 	posicaoPlayer1.x = 0;
 	posicaoPlayer1.y = 0;
 }
 
 //Funcao que verifica o melhor caminho a ser seguido (caminho passado menos vezes pelo agente)
-int escolherMelhorCaminho(int *vet_Caminhos){
+int escolheCaminhoPlayer1(int *vet_Caminhos){
 	int i, qtdPassos = 0, minPassos = INT_MAX,caminho;
 	for(i=0; i<NUMCAMINHOS; i++){
 		//Caso seja um caminho válido (!=PAREDE)
@@ -108,7 +102,7 @@ const char *run_Player1() {
 	}
 
 	//Busca o melhor caminho com o vetor de caminhos possiveis vet_Caminhos
-	int caminho = escolherMelhorCaminho(vet_Caminhos);
+	int caminho = escolheCaminhoPlayer1(vet_Caminhos);
 	
 	//Verifica qual caminho a ser seguido
 	switch(caminho){
@@ -143,14 +137,7 @@ const char *run_Player1() {
  						  passo. Caso todas as direcoes ja foram percorridas, volta o caminho seguindo a direcao oposta do topo
  						  da pilha e desempilha em seguida. 
 */
-void init_Player2() {
-	//Inicializa a matriz do player 1 com valores -1
-	for(int x=0; x<60; x++){
-		for(int y=0; y<35; y++){
-			player2_matrix[x][y] = 0;
-		}
-	}
-	
+void init_Player2() {	
 	//Inicializando a pilha (vazia)
 	while(pilhaPlayer2_caminho.size() > 0){
 		pilhaPlayer2_caminho.pop();
@@ -161,31 +148,55 @@ void init_Player2() {
 	posicaoPlayer2.y = 0;
 }
 
+int fHeuristica(int *vetCaminhos) {
+	int i, caminho;
+	float custoCaminho = FLT_MAX;
+	for(i=0; i<NUMCAMINHOS; i++){
+		if(vetCaminhos[i] == 1){
+			if(maze_HeuristicaDistEuclidiana(id_Caminhos[i]) < custoCaminho) caminho = i;
+		}
+	}
+	return caminho;
+}
+
 /*
 	Funcao que dado um vetor com os caminhos possiveis de serem percorridos, verifica se um desses é viavel de seguir (se for um
 	caminho aind não percorrido) e retorna o indice do caminho esoclhido. Caso todos ja foram percorridos, retorna -1.
 */
 int escolheCaminhoPlayer2(int *caminhosPossiveis){
-	int i;
+	float custoCaminho = FLT_MAX, funcHeuristica;
+	int i, caminho = -1;
 	for(i=0; i<NUMCAMINHOS; i++){
 		if(caminhosPossiveis[i] == 1){
 			switch (i)
 			{
 				case 0:
 					// Visualiza se a direcao norte é viavel
-					if(player2_matrix[posicaoPlayer2.x][posicaoPlayer2.y-1] == 0) return 0;
+					if(player2_matrix[posicaoPlayer2.x][posicaoPlayer2.y-1] == 0) {
+						funcHeuristica = maze_HeuristicaDistEuclidiana(id_Caminhos[i]);
+						if(funcHeuristica < custoCaminho){ caminho = i; custoCaminho = funcHeuristica;}
+					}
 					break;
 				case 1:
 					// Visualiza se a direcao sul é viavel
-					if(player2_matrix[posicaoPlayer2.x][posicaoPlayer2.y+1] == 0) return 1;
+					if(player2_matrix[posicaoPlayer2.x][posicaoPlayer2.y+1] == 0){
+						funcHeuristica = maze_HeuristicaDistEuclidiana(id_Caminhos[i]);
+						if(funcHeuristica < custoCaminho){ caminho = i; custoCaminho = funcHeuristica;}
+					}
 					break;
 				case 2:
 					// Visualiza se a direcao oeste é viavel
-					if(player2_matrix[posicaoPlayer2.x-1][posicaoPlayer2.y] == 0) return 2;
+					if(player2_matrix[posicaoPlayer2.x-1][posicaoPlayer2.y] == 0){
+						funcHeuristica = maze_HeuristicaDistEuclidiana(id_Caminhos[i]);
+						if(funcHeuristica < custoCaminho){ caminho = i; custoCaminho = funcHeuristica;}
+					}
 					break;
 				case 3:
 					// Visualiza se a direcao leste é viavel
-					if(player2_matrix[posicaoPlayer2.x+1][posicaoPlayer2.y] == 0) return 3;
+					if(player2_matrix[posicaoPlayer2.x+1][posicaoPlayer2.y] == 0){
+						funcHeuristica = maze_HeuristicaDistEuclidiana(id_Caminhos[i]);
+						if(funcHeuristica < custoCaminho) { caminho = i; custoCaminho = funcHeuristica;}
+					}
 					break;
 				default:
 					break;
@@ -193,7 +204,7 @@ int escolheCaminhoPlayer2(int *caminhosPossiveis){
 		}
 	}
 	// Nenhum caminho viavel
-	return -1;
+	return caminho;
 }
 
 void printStack(stack <const char *> pilha){
