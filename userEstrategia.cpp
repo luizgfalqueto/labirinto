@@ -161,41 +161,43 @@ int fHeuristica(int *vetCaminhos) {
 
 /*
 	Funcao que dado um vetor com os caminhos possiveis de serem percorridos, verifica se um desses é viavel de seguir (se for um
-	caminho aind não percorrido) e retorna o indice do caminho esoclhido. Caso todos ja foram percorridos, retorna -1.
+	caminho ainda não percorrido) e retorna o indice do caminho escolhido. Caso todos ja foram percorridos, retorna -1. O caminho
+	que eh retornado possui a menor heuristica (calculada pela soma do custo do caminho + a distancia euclidiana)
 */
 int escolheCaminhoPlayer2(int *caminhosPossiveis){
-	float custoCaminho = FLT_MAX, funcHeuristica;
+	float distEuclidiana = FLT_MAX, funcHeuristica;
 	int i, caminho = -1;
+
 	for(i=0; i<NUMCAMINHOS; i++){
-		if(caminhosPossiveis[i] == 1){
+		if(caminhosPossiveis[i] != 0){
 			switch (i)
 			{
 				case 0:
 					// Visualiza se a direcao norte é viavel
 					if(player2_matrix[posicaoPlayer2.x][posicaoPlayer2.y-1] == 0) {
-						funcHeuristica = maze_HeuristicaDistEuclidiana(id_Caminhos[i]);
-						if(funcHeuristica < custoCaminho){ caminho = i; custoCaminho = funcHeuristica;}
+						funcHeuristica = maze_CustoDoCaminho(id_Caminhos[i]) + maze_HeuristicaDistEuclidiana(id_Caminhos[i]);
+						if(funcHeuristica < distEuclidiana){ caminho = i; distEuclidiana = funcHeuristica;}
 					}
 					break;
 				case 1:
 					// Visualiza se a direcao sul é viavel
-					if(player2_matrix[posicaoPlayer2.x][posicaoPlayer2.y+1] == 0){
-						funcHeuristica = maze_HeuristicaDistEuclidiana(id_Caminhos[i]);
-						if(funcHeuristica < custoCaminho){ caminho = i; custoCaminho = funcHeuristica;}
+					if(player2_matrix[posicaoPlayer2.x][posicaoPlayer2.y+1] == 0){	
+						funcHeuristica = maze_CustoDoCaminho(id_Caminhos[i]) + maze_HeuristicaDistEuclidiana(id_Caminhos[i]);
+						if(funcHeuristica < distEuclidiana){ caminho = i; distEuclidiana = funcHeuristica;}
 					}
 					break;
 				case 2:
 					// Visualiza se a direcao oeste é viavel
 					if(player2_matrix[posicaoPlayer2.x-1][posicaoPlayer2.y] == 0){
-						funcHeuristica = maze_HeuristicaDistEuclidiana(id_Caminhos[i]);
-						if(funcHeuristica < custoCaminho){ caminho = i; custoCaminho = funcHeuristica;}
+						funcHeuristica = maze_CustoDoCaminho(id_Caminhos[i]) + maze_HeuristicaDistEuclidiana(id_Caminhos[i]);
+						if(funcHeuristica < distEuclidiana){ caminho = i; distEuclidiana = funcHeuristica;}
 					}
 					break;
 				case 3:
 					// Visualiza se a direcao leste é viavel
 					if(player2_matrix[posicaoPlayer2.x+1][posicaoPlayer2.y] == 0){
-						funcHeuristica = maze_HeuristicaDistEuclidiana(id_Caminhos[i]);
-						if(funcHeuristica < custoCaminho) { caminho = i; custoCaminho = funcHeuristica;}
+						funcHeuristica = maze_CustoDoCaminho(id_Caminhos[i]) + maze_HeuristicaDistEuclidiana(id_Caminhos[i]);
+						if(funcHeuristica < distEuclidiana) { caminho = i; distEuclidiana = funcHeuristica;}
 					}
 					break;
 				default:
@@ -205,37 +207,6 @@ int escolheCaminhoPlayer2(int *caminhosPossiveis){
 	}
 	// Nenhum caminho viavel
 	return caminho;
-}
-
-void printStack(stack <const char *> pilha){
-	printf("\n [ ");
-	while(!pilha.empty()){
-		const char *c = pilha.top();
-		cout << c;
-		printf(", ");
-		pilha.pop();
-	}
-	printf(" ]");
-}
-
-void printVet(int *vet){
-	int i;
-	printf("[");
-	for(i = 0; i<NUMCAMINHOS; i++){
-		printf(" %d", vet[i]);
-	}
-	printf(" ]\n");
-}
-
-void printMatrix(int mat[60][35]){
-	int i,j;
-	printf("Matriz atual: \n");
-	for(i=0; i<20; i++){
-		for(j=0; j<20; j++){
-			printf(" %d",mat[i][j]);
-		}
-		printf("\n");
-	}
 }
 
 /*
@@ -254,11 +225,12 @@ const char *run_Player2() {
 
 	player2_matrix[posicaoPlayer2.x][posicaoPlayer2.y] = 1; // Atualiza a posicao atual como percorrida
 	
-	int caminhosPossiveis[NUMCAMINHOS];
+	int caminhosPossiveis[NUMCAMINHOS] = {0};
 	int i;
 	for(i = 0; i<NUMCAMINHOS; i++){
-		if(maze_VerCaminho(id_Caminhos[i]) == PAREDE) caminhosPossiveis[i] = 0;
-		else caminhosPossiveis[i] = 1;
+		if(maze_VerCaminho(id_Caminhos[i]) == CAMINHO){
+			caminhosPossiveis[i] = 1;
+		}
 	}
 
 	int caminhoEscolhido = escolheCaminhoPlayer2(caminhosPossiveis);
