@@ -46,8 +46,6 @@ int player2_matrix[60][35] = {0};
 tipo_PosicaoPlano posicaoPlayer2;
 //Pilha para armazenamento do caminho percorrido pelo player2
 stack <const char *> pilhaPlayer2_caminho;
-//Pilha para fuga do minotauro
-stack <const char *> pilhaPlayer2_fugaMinotauro;
 
 // *** 	FUNCOES DE INICIALIZACAO E EXECUCAO DO JOGADOR 1 ***
 //	Implementacao da primeira estrategia de jogo.
@@ -228,11 +226,9 @@ const char *run_Player2() {
 	player2_matrix[posicaoPlayer2.x][posicaoPlayer2.y] = 1; // Atualiza a posicao atual como percorrida
 	
 	int caminhosPossiveis[NUMCAMINHOS] = {0};
-	// float heuristicas[NUMCAMINHOS] = {0};
 	int i;
 	for(i = 0; i<NUMCAMINHOS; i++){
 		if(maze_VerCaminho(id_Caminhos[i]) == CAMINHO){
-			// heuristicas[i] = maze_CustoDoCaminho(id_Caminhos[i]) + maze_HeuristicaDistEuclidiana(id_Caminhos[i]);
 			caminhosPossiveis[i] = 1;
 		}
 	}
