@@ -37,20 +37,44 @@ using namespace std;
 #include <stack>
 #include <string>
 
+/* ===========================================================================
+   ============================ AGENTE 1 =====================================
+   ===========================================================================
+*/
 //Matriz e struct de posicoes do agente 1
 int player1_matrix[60][35] = {0};
 tipo_PosicaoPlano posicaoPlayer1;
+//Pilha para armazenamento do caminho percorrido pelo player2
+stack <const char *> pilhaPlayer1_caminho;
 
+
+/* ===========================================================================
+   ============================ AGENTE 2 =====================================
+   ===========================================================================
+*/
 //Matriz e struct de posicoes do agente 2
 int player2_matrix[60][35] = {0};
 tipo_PosicaoPlano posicaoPlayer2;
 //Pilha para armazenamento do caminho percorrido pelo player2
 stack <const char *> pilhaPlayer2_caminho;
+//Pilha para armazenamento do caminho de fuga do player2
+stack <const char *> pilhaPlayer2_fuga;
+//Flag para determinar se o player vai fugir ou nao do minotauro
+bool isEscapingPlayer2;
+
+/* ===========================================================================
+   ======================= IMPLEMENTACAO PLAYER 1 ============================
+   ===========================================================================
+*/
 
 // *** 	FUNCOES DE INICIALIZACAO E EXECUCAO DO JOGADOR 1 ***
 //	Implementacao da primeira estrategia de jogo.
 //	Estratégia: em cada posição do agente, buscar todos os caminhos possiveis. Em seguida buscar em qual caminho foi passado menos vezes pelo agente 1
 void init_Player1() {
+	// //Inicializando a pilha
+	// while(pilhaPlayer1_caminho.size() > 0){
+	// 	pilhaPlayer1_caminho.pop();
+	// }
 	//Define posicao atual do agente 1
 	posicaoPlayer1.x = 0;
 	posicaoPlayer1.y = 0;
@@ -93,12 +117,11 @@ const char *run_Player1() {
 	const char *movimento = "null";
 
 	//Verifica quais caminhos sao possiveis. Ex: se o unico caminho é para leste -> vet_Caminhos=[0,0,0,1]
-	int vet_Caminhos[NUMCAMINHOS];
-	int cont_caminhos;
+	int vet_Caminhos[NUMCAMINHOS] = {0};
+	int i;
 
-	for(cont_caminhos = 0; cont_caminhos<NUMCAMINHOS; cont_caminhos++){
-		if(maze_VerCaminho(id_Caminhos[cont_caminhos]) == PAREDE) vet_Caminhos[cont_caminhos] = 0;
-		else vet_Caminhos[cont_caminhos] = 1;
+	for(i = 0; i<NUMCAMINHOS; i++){
+		if(maze_VerCaminho(id_Caminhos[i]) == CAMINHO) vet_Caminhos[i] = 1;
 	}
 
 	//Busca o melhor caminho com o vetor de caminhos possiveis vet_Caminhos
@@ -129,6 +152,11 @@ const char *run_Player1() {
 	return movimento;
 }
 
+/* ===========================================================================
+   ======================= IMPLEMENTACAO PLAYER 2 ============================
+   ===========================================================================
+*/
+
 /* 
 	*** 	FUNCOES DE INICIALIZACAO E EXECUCAO DO JOGADOR 2 ***
 	Implementacao da segunda estrategia de jogo.
@@ -143,9 +171,15 @@ void init_Player2() {
 		pilhaPlayer2_caminho.pop();
 	}
 
+	while(pilhaPlayer2_fuga.size() > 0){
+		pilhaPlayer2_fuga.pop();
+	}
+
 	//Define posicao atual do agente 2
 	posicaoPlayer2.x = 0;
 	posicaoPlayer2.y = 0;
+
+	isEscapingPlayer2 = false;
 }
 
 int fHeuristica(int *vetCaminhos) {
@@ -220,72 +254,172 @@ int get_id_return_path(const char *direction) {
 	return 3;
 }
 
+const char *andarPlayer2(int caminho){
+
+	const char * direcao = id_Caminhos[caminho];
+
+	pilhaPlayer2_caminho.push(direcao); // Empilha a direção
+
+	switch(caminho){
+		case 0:
+			posicaoPlayer2.y--;
+			break;
+		case 1:
+			posicaoPlayer2.y++;
+			break;
+		case 2:
+			posicaoPlayer2.x--;
+			break;
+		case 3:
+			posicaoPlayer2.x++;
+			break;
+		default:
+			break;
+	}
+
+	return direcao;
+}
+
+const char *retrocederPlayer2(){
+	const char *top_stack = "null";
+	top_stack = pilhaPlayer2_caminho.top(); // Armazenando o topo da pilha
+	pilhaPlayer2_caminho.pop(); // Desempilhando
+
+	int caminho_retorno = get_id_return_path(top_stack);
+
+	switch(caminho_retorno){
+		case 0:
+			posicaoPlayer2.y++;
+			break;
+		case 1:
+			posicaoPlayer2.y--;
+			break;
+		case 2:
+			posicaoPlayer2.x++;
+			break;
+		case 3:
+			posicaoPlayer2.x--;
+			break;
+		default:
+			break;
+	}
+
+	return id_Retornos[caminho_retorno];
+}
+
+const char *fugirPlayer2(){
+
+	const char *top_stack = "null";
+	top_stack = pilhaPlayer2_caminho.top(); // Armazenando o topo da pilha
+	pilhaPlayer2_caminho.pop(); // Desempilhando
+	pilhaPlayer2_fuga.push(top_stack);
+
+	int caminho_retorno = get_id_return_path(top_stack);
+
+	switch(caminho_retorno){
+		case 0:
+			posicaoPlayer2.y++;
+			break;
+		case 1:
+			posicaoPlayer2.y--;
+			break;
+		case 2:
+			posicaoPlayer2.x++;
+			break;
+		case 3:
+			posicaoPlayer2.x--;
+			break;
+		default:
+			break;
+	}
+
+	return id_Retornos[caminho_retorno];
+}
+
+const char *voltarFugaPlayer2(){
+	const char *top_Stack = "null";
+
+	top_Stack = pilhaPlayer2_fuga.top();
+	pilhaPlayer2_fuga.pop();
+
+	int caminho = get_id_return_path(top_Stack);
+
+	switch(caminho){
+		case 0:
+			posicaoPlayer2.y--;
+			break;
+		case 1:
+			posicaoPlayer2.y++;
+			break;
+		case 2:
+			posicaoPlayer2.x--;
+			break;
+		case 3:
+			posicaoPlayer2.x++;
+			break;
+		default:
+			break;
+	}
+
+	return top_Stack;
+}
+
 const char *run_Player2() {
 	const char *movimento = "null";
+	int caminhoEscolhido;
 
-	player2_matrix[posicaoPlayer2.x][posicaoPlayer2.y] = 1; // Atualiza a posicao atual como percorrida
-	
-	int caminhosPossiveis[NUMCAMINHOS] = {0};
-	int i;
-	for(i = 0; i<NUMCAMINHOS; i++){
-		if(maze_VerCaminho(id_Caminhos[i]) == CAMINHO){
-			caminhosPossiveis[i] = 1;
+	if(!isEscapingPlayer2){
+		player2_matrix[posicaoPlayer2.x][posicaoPlayer2.y] = 1; // Atualiza a posicao atual como percorrida
+		
+		int caminhosPossiveis[NUMCAMINHOS] = {0};
+		int i;
+		for(i = 0; i<NUMCAMINHOS; i++){
+			if(maze_VerCaminho(id_Caminhos[i]) == CAMINHO){
+				caminhosPossiveis[i] = 1;
+			}
+		}
+		
+		caminhoEscolhido = escolheCaminhoPlayer2(caminhosPossiveis);
+
+		if(caminhoEscolhido != -1){
+			isEscapingPlayer2 = maze_VerMinotauro(id_Caminhos[caminhoEscolhido]);
 		}
 	}
 
-	int caminhoEscolhido = escolheCaminhoPlayer2(caminhosPossiveis);
+	if(isEscapingPlayer2){
+		//Fugir
+		if(pilhaPlayer2_fuga.size() < 15){
 
-	if(caminhoEscolhido == -1){
-		// Nao há caminhos ainda nao percorridos, entao é momento de desempilhar
+			player2_matrix[posicaoPlayer2.x][posicaoPlayer2.y] = 0;
+			movimento = fugirPlayer2();
+		}else{
 
-		const char *top_stack = "null";
-		top_stack = pilhaPlayer2_caminho.top(); // Armazenando o topo da pilha
-		pilhaPlayer2_caminho.pop(); // Desempilhando
-
-		int caminho_retorno = get_id_return_path(top_stack);
-
-		switch(caminho_retorno){
-			case 0:
-				posicaoPlayer2.y++;
-				break;
-			case 1:
-				posicaoPlayer2.y--;
-				break;
-			case 2:
-				posicaoPlayer2.x++;
-				break;
-			case 3:
-				posicaoPlayer2.x--;
-				break;
-			default:
-				break;
+			player2_matrix[posicaoPlayer2.x][posicaoPlayer2.y] = 1;
+			isEscapingPlayer2 = false;
+			movimento = voltarFugaPlayer2();
 		}
-
-		return id_Retornos[caminho_retorno];
-
 	}else{
-		// Encontrou pelo menos um caminho viavel
-		const char * direcao = id_Caminhos[caminhoEscolhido];
+		//Nao fugir
+		//Verificar se a pilha de fuga está vazia
+		//	Se pilha fuga ainda nao vazia, voltar fuga
 
-		pilhaPlayer2_caminho.push(direcao); // Empilha a direção
+		if(pilhaPlayer2_fuga.size() > 0){
 
-		switch(caminhoEscolhido){
-			case 0:
-				posicaoPlayer2.y--;
-				break;
-			case 1:
-				posicaoPlayer2.y++;
-				break;
-			case 2:
-				posicaoPlayer2.x--;
-				break;
-			case 3:
-				posicaoPlayer2.x++;
-				break;
-			default:
-				break;
+			player2_matrix[posicaoPlayer2.x][posicaoPlayer2.y] = 1;
+			movimento = voltarFugaPlayer2();
+		}else{
+			if(caminhoEscolhido == -1){
+				
+				// Nao há caminhos ainda nao percorridos, entao é momento de desempilhar
+				movimento = retrocederPlayer2();
+
+			}else{
+
+				// Encontrou pelo menos um caminho viavel
+				movimento = andarPlayer2(caminhoEscolhido);
+			}
 		}
-
-		return direcao;
 	}
+
+	return movimento;
 }
