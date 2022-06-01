@@ -57,10 +57,10 @@ int player2_matrix[60][35] = {0};
 tipo_PosicaoPlano posicaoPlayer2;
 //Pilha para armazenamento do caminho percorrido pelo player2
 stack <const char *> pilhaPlayer2_caminho;
-//Pilha para armazenamento do caminho de fuga do player2
-stack <const char *> pilhaPlayer2_fuga;
 //Flag para determinar se o player vai fugir ou nao do minotauro
 bool isEscapingPlayer2;
+//Inteiro armazenando a quantidade de passos para fugir do minotauro
+int qtdPassosFuga;
 
 /* ===========================================================================
    ======================= IMPLEMENTACAO PLAYER 1 ============================
@@ -171,26 +171,12 @@ void init_Player2() {
 		pilhaPlayer2_caminho.pop();
 	}
 
-	while(pilhaPlayer2_fuga.size() > 0){
-		pilhaPlayer2_fuga.pop();
-	}
-
 	//Define posicao atual do agente 2
 	posicaoPlayer2.x = 0;
 	posicaoPlayer2.y = 0;
 
 	isEscapingPlayer2 = false;
-}
-
-int fHeuristica(int *vetCaminhos) {
-	int i, caminho;
-	float custoCaminho = FLT_MAX;
-	for(i=0; i<NUMCAMINHOS; i++){
-		if(vetCaminhos[i] == 1){
-			if(maze_HeuristicaDistEuclidiana(id_Caminhos[i]) < custoCaminho) caminho = i;
-		}
-	}
-	return caminho;
+	qtdPassosFuga = 0;
 }
 
 /*
@@ -256,6 +242,8 @@ int get_id_return_path(const char *direction) {
 
 const char *andarPlayer2(int caminho){
 
+	player2_matrix[posicaoPlayer2.x][posicaoPlayer2.y] = 1;
+
 	const char * direcao = id_Caminhos[caminho];
 
 	pilhaPlayer2_caminho.push(direcao); // Empilha a direção
@@ -308,11 +296,11 @@ const char *retrocederPlayer2(){
 }
 
 const char *fugirPlayer2(){
+	player2_matrix[posicaoPlayer2.x][posicaoPlayer2.y] = 0;
 
 	const char *top_stack = "null";
 	top_stack = pilhaPlayer2_caminho.top(); // Armazenando o topo da pilha
 	pilhaPlayer2_caminho.pop(); // Desempilhando
-	pilhaPlayer2_fuga.push(top_stack);
 
 	int caminho_retorno = get_id_return_path(top_stack);
 
@@ -336,32 +324,8 @@ const char *fugirPlayer2(){
 	return id_Retornos[caminho_retorno];
 }
 
-const char *voltarFugaPlayer2(){
-	const char *top_Stack = "null";
-
-	top_Stack = pilhaPlayer2_fuga.top();
-	pilhaPlayer2_fuga.pop();
-
-	int caminho = get_id_return_path(top_Stack);
-
-	switch(caminho){
-		case 0:
-			posicaoPlayer2.y--;
-			break;
-		case 1:
-			posicaoPlayer2.y++;
-			break;
-		case 2:
-			posicaoPlayer2.x--;
-			break;
-		case 3:
-			posicaoPlayer2.x++;
-			break;
-		default:
-			break;
-	}
-
-	return top_Stack;
+bool isBeginPlayer2(){
+	return (posicaoPlayer2.x==0 && posicaoPlayer2.y==0) ? true : false;
 }
 
 const char *run_Player2() {
@@ -382,42 +346,39 @@ const char *run_Player2() {
 		caminhoEscolhido = escolheCaminhoPlayer2(caminhosPossiveis);
 
 		if(caminhoEscolhido != -1){
+			
 			isEscapingPlayer2 = maze_VerMinotauro(id_Caminhos[caminhoEscolhido]);
 		}
 	}
 
 	if(isEscapingPlayer2){
+		if(isBeginPlayer2()){
+			qtdPassosFuga = 0;
+			isEscapingPlayer2 = false;
+		}
 		//Fugir
-		if(pilhaPlayer2_fuga.size() < 15){
-
-			player2_matrix[posicaoPlayer2.x][posicaoPlayer2.y] = 0;
+		else if(qtdPassosFuga < 30){
+			qtdPassosFuga++;
 			movimento = fugirPlayer2();
 		}else{
-
-			player2_matrix[posicaoPlayer2.x][posicaoPlayer2.y] = 1;
+			qtdPassosFuga = 0;
 			isEscapingPlayer2 = false;
-			movimento = voltarFugaPlayer2();
 		}
 	}else{
 		//Nao fugir
 		//Verificar se a pilha de fuga está vazia
 		//	Se pilha fuga ainda nao vazia, voltar fuga
+		if(qtdPassosFuga > 0){
+			qtdPassosFuga = 0;
+		}
 
-		if(pilhaPlayer2_fuga.size() > 0){
+		if(caminhoEscolhido == -1){
+			// Nao há caminhos ainda nao percorridos, entao é momento de desempilhar
+			movimento = retrocederPlayer2();
 
-			player2_matrix[posicaoPlayer2.x][posicaoPlayer2.y] = 1;
-			movimento = voltarFugaPlayer2();
 		}else{
-			if(caminhoEscolhido == -1){
-				
-				// Nao há caminhos ainda nao percorridos, entao é momento de desempilhar
-				movimento = retrocederPlayer2();
-
-			}else{
-
-				// Encontrou pelo menos um caminho viavel
-				movimento = andarPlayer2(caminhoEscolhido);
-			}
+			// Encontrou pelo menos um caminho viavel
+			movimento = andarPlayer2(caminhoEscolhido);
 		}
 	}
 
