@@ -364,6 +364,10 @@ const char *voltarFugaPlayer2(){
 	return top_Stack;
 }
 
+bool isBeginPlayer2(){
+	return posicaoPlayer2.x==0 && posicaoPlayer2.y==0 ? true : false;
+}
+
 const char *run_Player2() {
 	const char *movimento = "null";
 	int caminhoEscolhido;
@@ -382,42 +386,42 @@ const char *run_Player2() {
 		caminhoEscolhido = escolheCaminhoPlayer2(caminhosPossiveis);
 
 		if(caminhoEscolhido != -1){
+			//Verificar se tem caminhos viaveis e seguir ao inves de fugir
 			isEscapingPlayer2 = maze_VerMinotauro(id_Caminhos[caminhoEscolhido]);
 		}
 	}
 
 	if(isEscapingPlayer2){
 		//Fugir
-		if(pilhaPlayer2_fuga.size() < 15){
+		if(pilhaPlayer2_fuga.size() < 15 || isBeginPlayer2()){
 
 			player2_matrix[posicaoPlayer2.x][posicaoPlayer2.y] = 0;
+			// cout << "Fugindo minotauro" << endl;
 			movimento = fugirPlayer2();
 		}else{
 
 			player2_matrix[posicaoPlayer2.x][posicaoPlayer2.y] = 1;
 			isEscapingPlayer2 = false;
+			// cout << "Voltando fuga" << endl;
 			movimento = voltarFugaPlayer2();
 		}
 	}else{
 		//Nao fugir
 		//Verificar se a pilha de fuga está vazia
 		//	Se pilha fuga ainda nao vazia, voltar fuga
-
 		if(pilhaPlayer2_fuga.size() > 0){
+			pilhaPlayer2_fuga.pop();
+		}
 
-			player2_matrix[posicaoPlayer2.x][posicaoPlayer2.y] = 1;
-			movimento = voltarFugaPlayer2();
+		if(caminhoEscolhido == -1){
+			// cout << "Retrocedendo player2" << endl;
+			// Nao há caminhos ainda nao percorridos, entao é momento de desempilhar
+			movimento = retrocederPlayer2();
+
 		}else{
-			if(caminhoEscolhido == -1){
-				
-				// Nao há caminhos ainda nao percorridos, entao é momento de desempilhar
-				movimento = retrocederPlayer2();
-
-			}else{
-
-				// Encontrou pelo menos um caminho viavel
-				movimento = andarPlayer2(caminhoEscolhido);
-			}
+			// cout << "Andando player2" << endl;
+			// Encontrou pelo menos um caminho viavel
+			movimento = andarPlayer2(caminhoEscolhido);
 		}
 	}
 
